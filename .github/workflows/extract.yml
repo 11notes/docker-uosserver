@@ -98,6 +98,7 @@ jobs:
           file: firmware.dockerfile
           push: true
           sbom: true
+          no-cache: true
           provenance: mode=max
           platforms: linux/${{ env.WORKFLOW_RUNNER_ARCH }}
           tags: |
