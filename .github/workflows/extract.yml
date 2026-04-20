@@ -34,7 +34,35 @@ jobs:
           - 5000:5000
     steps:
       # ╔═════════════════════════════════════════════════════╗
-      # ║                 SETUP ENVIRONMENT                   ║
+      # ║             CONTAINER REGISTRY LOGIN                ║
+      # ╚═════════════════════════════════════════════════════╝
+      # DOCKER HUB
+      - name: docker / login to hub
+        uses: redhat-actions/podman-login@de1fa16e0ecaaa44c0d537db88f68d183b32a8e0
+        with:
+          registry: docker.io
+          username: 11notes
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # GITHUB CONTAINER REGISTRY
+      - name: github / login to ghcr
+        uses: redhat-actions/podman-login@de1fa16e0ecaaa44c0d537db88f68d183b32a8e0
+        with:
+          registry: ghcr.io
+          username: 11notes
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # REDHAT QUAY
+      - name: quay / login to quay
+        uses: redhat-actions/podman-login@de1fa16e0ecaaa44c0d537db88f68d183b32a8e0
+        with:
+          registry: quay.io
+          username: 11notes+github
+          password: ${{ secrets.QUAY_TOKEN }}
+
+
+      # ╔═════════════════════════════════════════════════════╗
+      # ║                 EXTRACT CONTAINER                   ║
       # ╚═════════════════════════════════════════════════════╝
       # REQUIREMENTS
       - name: requirements
@@ -61,9 +89,21 @@ jobs:
       # INSTALL
       - name: install
         run: |
-          echo "y" | sudo /tmp/uosserver || echo "installed"          
+          echo "y" | sudo /tmp/uosserver || echo "timeout reached, extracting container image"
           sudo cp -a /home/uosserver/.local/share/containers/storage/overlay/. ${HOME}/.local/share/containers/storage/overlay/          
           sudo cp -a /home/uosserver/.local/share/containers/storage/overlay-images/. ${HOME}/.local/share/containers/storage/overlay-images/
           sudo cp -a /home/uosserver/.local/share/containers/storage/overlay-layers/. ${HOME}/.local/share/containers/storage/overlay-layers/
           sudo chown -R runner:runner ${HOME}/.local/share/containers/storage
-          podman images
+
+      # EXTRACT
+      - name: install
+        run: |
+          ARCH=$(arch)
+          case "${ARCH}" in
+            "x86_64") ARCH=amd64;;
+            "aarch64") ARCH=arm64;;
+          esac
+          PODMAN_IMAGE_TAG=$(podman images uosserver --noheading | awk '{print $2}')
+          PODMAN_IMAGE_ID=$(podman images uosserver --noheading | awk '{print $3}')
+
+          podman push $PODMAN_IMAGE_ID localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${ARCH}
