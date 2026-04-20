@@ -1,0 +1,22 @@
+{
+  "image": "11notes/uosserver",
+  "platform": "amd64,arm64",
+  "name": "uosserver",
+  "root": "/",
+  "semver": {
+    "version": "5.0.6"
+  },
+  "readme": {
+    "description": "run Unifi OS server as a container",
+    "introduction": "Self‑hosted software package that delivers UniFi Network, and soon additional applications in the UniFi ecosystem, from a single install.",
+    "parent": {
+      "image": "11notes/uosserver:fw-5.0.6"
+    },
+    "built": {
+      "uosserver": "https://community.ui.com/releases/r/uosserver/5.0.6"
+    }
+  },
+  "grype": {
+    "fail": false
+  }
+}
