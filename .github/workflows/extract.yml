@@ -106,4 +106,4 @@ jobs:
           PODMAN_IMAGE_TAG=$(podman images uosserver --noheading | awk '{print $2}')
           PODMAN_IMAGE_ID=$(podman images uosserver --noheading | awk '{print $3}')
 
-          podman push --tls-verify false $PODMAN_IMAGE_ID localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${ARCH}
+          podman push --tls-verify=false $PODMAN_IMAGE_ID localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${ARCH}
