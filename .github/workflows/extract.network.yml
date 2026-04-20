@@ -41,14 +41,14 @@ jobs:
           cd ./build/extract/network
           docker compose up -d
 
-      # WAIT TILL CONTAINER STATUS IS HEALTHY AND SETUP IS STARTED OR TIMEOUT
-      - name: wait
+      # WAIT TILL CONTAINER STATUS IS HEALTHY
+      - name: wait for startup
         run: |
           echo "checking container startup ..."
           RUN=1
           while [ ${RUN} -ge 1 ]; do
             HEALTH=$(docker inspect --format='{{json .State.Health}}' unifi-os-server-1 | jq -r '.Status')
-            echo "health: ${HEALTH}"
+            echo "container health: ${HEALTH}"
             if [ ${HEALTH} == "healthy" ]; then
               RUN=0
             else
@@ -56,11 +56,14 @@ jobs:
             fi
           done
 
-           echo "checking app setup startup ..."
+      # WAIT TILL UNIFI OS SERVER SETUP IS READY
+      - name: wait for startup
+        run: |
+          echo "checking Unifi OS Server ready ..."
           RUN=1
           while [ ${RUN} -ge 1 ]; do
             STATUS=$(curl -skI -o /dev/null -w "%{http_code}" https://localhost:3000/api/system/previous-subnet)
-            echo "status code: ${STATUS}"
+            echo "Unifi OS Server status: ${STATUS}"
             if [ ${STATUS} == 200 ]; then
               RUN=0
             else
@@ -68,8 +71,8 @@ jobs:
             fi
           done
 
-      # SETUP UNIFI OS SERVER AND UPDATE NETWORK
-      - name: update
+      # SETUP UNIFI OS SERVER
+      - name: setup
         run: |
           echo "setup controller"
           curl -k -X POST https://localhost:3000/api/setup \
@@ -83,8 +86,13 @@ jobs:
             "enableRemoteAdmin": false,
             "analytics": false
           }'
+
+      # UPGRADE CONTROLLER
+      - name: upgrade
+        run: |
+          echo "NETWORK_VERSION=$(docker exec unifi-os-server-1 cat /usr/lib/unifi/data/db/version)" >> "${GITHUB_ENV}"
           echo "authenticate and get token"
-          RESPONSE_HEADERS=$(curl -k -s -D - -o /dev/null https://localhost:3000/api/auth/login \
+          RESPONSE_HEADERS=$(curl -ks -D - -o /dev/null https://localhost:3000/api/auth/login \
             -c cookies.txt \
             -H "Content-Type: application/json" \
             -d '{
@@ -92,20 +100,20 @@ jobs:
               "password": "${{ env.PASSWORD }}"
             }')
           CSRF_TOKEN=$(echo ${RESPONSE_HEADERS} | grep -o "x-csrf-token: .*" | awk -F ' ' '{print $2}' | tr -d '\r')
-          echo "update network"
-          curl -k -X POST https://localhost:3000/api/controllers/network/update \
+          curl -ks -X POST https://localhost:3000/api/controllers/network/update \
             -b cookies.txt \
             -H "Content-Type: application/json" \
             -H "x-csrf-token: $CSRF_TOKEN" \
             -d '{}'
 
-          echo "wait for update to complete"
-          VERSION_PRE=$(docker exec unifi-os-server-1 cat /usr/lib/unifi/data/db/version)
+      # WAIT FOR UPGRADE COMPLETION
+      - name: wait upgrade
+        run: |
           RUN=1
           while [ ${RUN} -ge 1 ]; do
             VERSION=$(docker exec unifi-os-server-1 cat /usr/lib/unifi/data/db/version)
-            echo "version: ${VERSION}"
-            if [ ${VERSION} != ${VERSION_PRE} ]; then
+            echo "current version: ${VERSION} (pre-upgrade: ${{ env.NETWORK_VERSION }})"
+            if [ ${VERSION} != ${{ env.NETWORK_VERSION }} ]; then
               RUN=0
             else
               sleep 5s
