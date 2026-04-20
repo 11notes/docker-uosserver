@@ -43,6 +43,9 @@ jobs:
           chmod 755 ${HOME} ${HOME}/.config ${HOME}/.config/containers
           touch ${HOME}/.config/containers/storage.conf
           chmod 755 ${HOME}/.config/containers/storage.conf
+          mkdir -p ${HOME}/.local/share/containers/storage/overlay
+          mkdir -p ${HOME}/.local/share/containers/storage/overlay-images
+          mkdir -p ${HOME}/.local/share/containers/storage/overlay-layers
 
       # DOWNLOAD
       - name: download
@@ -58,12 +61,9 @@ jobs:
       # INSTALL
       - name: install
         run: |
-          echo "y" | sudo /tmp/uosserver || echo "installed"
-          mkdir -p ${HOME}/.local/share/containers/storage/overlay
-          sudo cp -a /home/uosserver/.local/share/containers/storage/overlay/. ${HOME}/.local/share/containers/storage/overlay/
-          mkdir -p ${HOME}/.local/share/containers/storage/overlay-images
+          echo "y" | sudo /tmp/uosserver || echo "installed"          
+          sudo cp -a /home/uosserver/.local/share/containers/storage/overlay/. ${HOME}/.local/share/containers/storage/overlay/          
           sudo cp -a /home/uosserver/.local/share/containers/storage/overlay-images/. ${HOME}/.local/share/containers/storage/overlay-images/
-          mkdir -p ${HOME}/.local/share/containers/storage/overlay-layers
           sudo cp -a /home/uosserver/.local/share/containers/storage/overlay-layers/. ${HOME}/.local/share/containers/storage/overlay-layers/
           sudo chown -R runner:runner ${HOME}/.local/share/containers/storage
           podman images
