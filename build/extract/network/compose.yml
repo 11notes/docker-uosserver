@@ -18,7 +18,7 @@ services:
       - "os-server.lib:/var/lib/unifi"
       - "os-server.db:/var/lib/mongodb"
       - "os-server.rabbitmq.ssl:/etc/rabbitmq/ssl"
-      - "${HOME}/extract/network:/ext"
+      - "${RUNNER_TMP}:/ext"
     tmpfs:
       - "/run:exec"
       - "/run/lock"

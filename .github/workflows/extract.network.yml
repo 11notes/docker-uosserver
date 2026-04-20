@@ -37,9 +37,9 @@ jobs:
       # RUN CONTAINER
       - name: run
         run: |
-          mkdir -p ${HOME}/extract/network
+          mkdir -p ${{ runner.temp }}/network
           cd ./build/extract/network
-          docker compose up -d
+          RUNNER_TMP=${{ runner.temp }}/network docker compose up -d
 
       # WAIT TILL CONTAINER STATUS IS HEALTHY
       - name: wait for startup
@@ -122,6 +122,7 @@ jobs:
             VERSION=$(docker exec unifi-os-server-1 cat /usr/lib/unifi/data/db/version)
             echo "current version: ${VERSION} (pre-upgrade: ${{ env.NETWORK_VERSION }})"
             if [ ${VERSION} != ${{ env.NETWORK_VERSION }} ]; then
+              echo "NETWORK_VERSION_UPDATE=${VERSION}" >> "${GITHUB_ENV}"
               RUN=0
             else
               sleep 5s
@@ -131,9 +132,22 @@ jobs:
       # EXTRACT VERSION
       - name: extract
         run: |
-          docker exec unifi-os-server-1 mkdir -p /ext/unifi
-          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/bin /ext/unifi/bin
-          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/dl /ext/unifi/dl
-          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/lib /ext/unifi/lib
-          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/webapps /ext/unifi/webapps
-          ls -lah ${HOME}/extract/network
+          docker exec unifi-os-server-1 mkdir -p /ext/UniFi
+          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/bin /ext/UniFi/bin
+          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/dl /ext/UniFi/dl
+          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/lib /ext/UniFi/lib
+          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/webapps /ext/UniFi/webapps
+          cd ${{ runner.temp }}/network
+          zip -r UniFi-${{ env.NETWORK_VERSION_UPDATE }}.zip UniFi
+          rm -rf UniFi
+
+      # PUSH ZIP TO R2
+      - uses: ryand56/r2-upload-action@4f4bf1b8f0b132344cefe6f69d6b8c7f6117d665 # v1.4
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: pub-11notes-dev
+          source-dir: ${{ runner.temp }}/network
+          destination-dir: ./app/unifi-network-controller
+          keep-file-fresh: true
