@@ -76,21 +76,26 @@ jobs:
           mkdir -p ${HOME}/.local/share/containers/storage/overlay-layers
           ARCH=$(arch)
           case "${ARCH}" in
-            "x86_64") export ARCH=x64;;
-            "aarch64") export ARCH=arm64;;
+            "x86_64")
+              echo "DOWNLOAD_ARCH=x64" >> "${GITHUB_ENV}"
+              echo "WORKFLOW_RUNNER_ARCH=amd64" >> "${GITHUB_ENV}"
+            ;;
+            "aarch64")
+              echo "DOWNLOAD_ARCH=arm64" >> "${GITHUB_ENV}"
+              echo "WORKFLOW_RUNNER_ARCH=arm64" >> "${GITHUB_ENV}"
           esac
 
       # DOWNLOAD
       - name: download
         run: |
-          wget -q --show-progress --progress=bar:force -O /tmp/uosserver $(curl -s "https://fw-update.ubnt.com/api/firmware?filter=eq~~product~~unifi-os-server&filter=eq~~platform~~linux-${ARCH}&filter=eq~~channel~~release&sort=-version" | jq -r "._embedded.firmware[] | select(.version | test(\"v${{ github.event.inputs.version }}\")) | ._links.data.href")
+          wget -q --show-progress --progress=bar:force -O /tmp/uosserver $(curl -s "https://fw-update.ubnt.com/api/firmware?filter=eq~~product~~unifi-os-server&filter=eq~~platform~~linux-${{ env.DOWNLOAD_ARCH }}&filter=eq~~channel~~release&sort=-version" | jq -r "._embedded.firmware[] | select(.version | test(\"v${{ github.event.inputs.version }}\")) | ._links.data.href")
           chmod +x /tmp/uosserver
 
       # INSTALL
       - name: install
         run: |
           echo "y" | sudo /tmp/uosserver || echo "timeout reached, extracting container image"
-          sudo cp -a /home/uosserver/.local/share/containers/storage/overlay/. ${HOME}/.local/share/containers/storage/overlay/          
+          sudo cp -a /home/uosserver/.local/share/containers/storage/overlay/. ${HOME}/.local/share/containers/storage/overlay/
           sudo cp -a /home/uosserver/.local/share/containers/storage/overlay-images/. ${HOME}/.local/share/containers/storage/overlay-images/
           sudo cp -a /home/uosserver/.local/share/containers/storage/overlay-layers/. ${HOME}/.local/share/containers/storage/overlay-layers/
           sudo chown -R runner:runner ${HOME}/.local/share/containers/storage
@@ -98,17 +103,16 @@ jobs:
       # EXTRACT
       - name: extract
         run: |
-          PODMAN_IMAGE_TAG=$(podman images uosserver --noheading | awk '{print $2}')
-          PODMAN_IMAGE_ID=$(podman images uosserver --noheading | awk '{print $3}')
-
-          podman push --tls-verify=false $PODMAN_IMAGE_ID localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${ARCH}
+          IMAGE="localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}"
+          echo "WORKFLOW_IMAGE=${IMAGE}" >> "${GITHUB_ENV}"
+          podman push --tls-verify=false $(podman images uosserver --noheading | awk '{print $3}') ${IMAGE}
 
       # SCAN
       - name: scan with grype
         id: grype
         uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         with:
-          image: localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${ARCH}
+          image: ${{ env.WORKFLOW_IMAGE }}
           fail-build: true
           severity-cutoff: 'critical'
           output-format: 'sarif'
@@ -120,7 +124,7 @@ jobs:
         if: failure() || steps.grype.outcome == 'failure'
         uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         with:
-          image: localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${ARCH}
+          image: ${{ env.WORKFLOW_IMAGE }}
           fail-build: false
           severity-cutoff: 'critical'
           output-format: 'table'
