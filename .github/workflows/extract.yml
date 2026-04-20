@@ -134,6 +134,7 @@ jobs:
 
       # BUILD IMAGE BASED ON EXTRACTED IMAGE AND PUSH TO REGISTRIES
       - name: push
+        id: image-push
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
@@ -147,6 +148,32 @@ jobs:
             11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
             ghcr.io/11notes/docker-uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
             quay.io/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
+
+      # CREATE ATTESTATION ARTIFACTS
+      - name: attestation
+        if: steps.image-push.outcome == 'success'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: docker.io/11notes/uosserver
+          subject-digest: ${{ steps.image-push.outputs.digest }}
+          push-to-registry: false
+
+      # EXPORT DIGEST
+      - name: container image / export digest
+        if: steps.image-push.outcome == 'success'
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.image-push.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      # UPLOAD DIGEST
+      - name: container image / upload
+        if: steps.image-push.outcome == 'success'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: digests-linux-${{ env.DOCKER_IMAGE_PLATFORM_SANITIZED }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
 
 
   # ╔═════════════════════════════════════════════════════╗
