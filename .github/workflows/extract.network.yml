@@ -87,6 +87,8 @@ jobs:
             "analytics": false
           }'
 
+          sleep 60s
+
       # UPGRADE CONTROLLER
       - name: upgrade
         run: |
@@ -100,7 +102,12 @@ jobs:
               "password": "${{ env.PASSWORD }}"
             }')
           CSRF_TOKEN=$(echo ${RESPONSE_HEADERS} | grep -o "x-csrf-token: .*" | awk -F ' ' '{print $2}' | tr -d '\r')
-          echo "csrf-token: ${CSRF_TOKEN}"
+          curl -k -X POST https://192.168.18.200:443/api/controllers/checkUpdates \
+            -b cookies.txt \
+            -H "Content-Type: application/json" \
+            -H "x-csrf-token: $CSRF_TOKEN" \
+            -d '{}'
+          sleep 15s
           curl -ks -X POST https://localhost/api/controllers/network/update \
             -b cookies.txt \
             -H "Content-Type: application/json" \
