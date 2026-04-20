@@ -17,27 +17,11 @@ jobs:
   # ╚═════════════════════════════════════════════════════╝
   extract:
     name: create container image
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [ubuntu-24.04, ubuntu-24.04-arm]
-    outputs:
-      IMAGE_MERGE_TAG: ${{ github.event.inputs.version }}
-
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
+    runs-on: ubuntu-24.04
 
     permissions:
-      actions: write
       contents: write
       packages: write
-      attestations: write
-      id-token: write
-      security-events: write
 
     steps:
       # ╔═════════════════════════════════════════════════════╗
@@ -60,7 +44,16 @@ jobs:
       # WAIT TILL CONTAINER STATUS IS HEALTHY
       - name: wait
         run: |
-          sleep 60s
+          RUN=1
+          while [ ${RUN} -ge 1 ]; do
+            HEALTH=$(docker inspect --format='{{json .State.Health}}' unifi-os-server-1 | jq -r '.Status')
+            echo "health: ${HEALTH}"
+            if [ ${HEALTH} == "healthy" ]; then
+              RUN=0
+            else
+              sleep 5s
+            fi
+          done
 
       # SETUP UNIFI OS SERVER AND UPDATE NETWORK
       - name: update
@@ -86,9 +79,22 @@ jobs:
               "password": "${{ env.PASSWORD }}"
             }')
           CSRF_TOKEN=$(echo ${RESPONSE_HEADERS} | grep -o "x-csrf-token: .*" | awk -F ' ' '{print $2}' | tr -d '\r')
-          echo "update controller"
+          echo "update network"
           curl -k -X POST https://localhost:3000/api/controllers/network/update \
             -b cookies.txt \
             -H "Content-Type: application/json" \
             -H "x-csrf-token: $CSRF_TOKEN" \
             -d '{}'
+
+          echo "wait for update to complete"
+          VERSION_PRE=$(docker exec unifi-os-server-1 cat /usr/lib/unifi/data/db/version)
+          RUN=1
+          while [ ${RUN} -ge 1 ]; do
+            VERSION=$(docker exec unifi-os-server-1 cat /usr/lib/unifi/data/db/version)
+            echo "version: ${VERSION}"
+            if [ ${VERSION} != ${VERSION_PRE} ]; then
+              RUN=0
+            else
+              sleep 5s
+            fi
+          done
