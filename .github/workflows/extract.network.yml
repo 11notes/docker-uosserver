@@ -139,7 +139,7 @@ jobs:
           docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/webapps /ext/UniFi/webapps
           cd ${{ runner.temp }}/network
           zip -r UniFi-${{ env.NETWORK_VERSION_UPDATE }}.zip UniFi
-          rm -rf UniFi
+          sudo rm -rf UniFi
 
       # PUSH ZIP TO R2
       - uses: ryand56/r2-upload-action@4f4bf1b8f0b132344cefe6f69d6b8c7f6117d665 # v1.4
