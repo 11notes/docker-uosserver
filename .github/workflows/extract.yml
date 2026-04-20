@@ -27,7 +27,7 @@ jobs:
       matrix:
         runner: [ubuntu-24.04, ubuntu-24.04-arm]
     outputs:
-      DOCKER_IMAGE_MERGE_TAG: ${{ github.event.inputs.version }}
+      IMAGE_MERGE_TAG: ${{ github.event.inputs.version }}
 
     services:
       registry:
