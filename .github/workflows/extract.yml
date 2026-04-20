@@ -34,6 +34,15 @@ jobs:
         image: registry:2
         ports:
           - 5000:5000
+
+    permissions:
+      actions: write
+      contents: write
+      packages: write
+      attestations: write
+      id-token: write
+      security-events: write
+
     steps:
       # ╔═════════════════════════════════════════════════════╗
       # ║             CONTAINER REGISTRY LOGIN                ║
@@ -136,7 +145,7 @@ jobs:
           platforms: linux/${{ env.WORKFLOW_RUNNER_ARCH }}
           tags: |
             11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
-            ghcr.io/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
+            ghcr.io/11notes/docker-uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
             quay.io/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
 
 
