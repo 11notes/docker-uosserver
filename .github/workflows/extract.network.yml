@@ -102,7 +102,7 @@ jobs:
               "password": "${{ env.PASSWORD }}"
             }')
           CSRF_TOKEN=$(echo ${RESPONSE_HEADERS} | grep -o "x-csrf-token: .*" | awk -F ' ' '{print $2}' | tr -d '\r')
-          curl -k -X POST https://192.168.18.200:443/api/controllers/checkUpdates \
+          curl -k -X POST https://localhost/api/controllers/checkUpdates \
             -b cookies.txt \
             -H "Content-Type: application/json" \
             -H "x-csrf-token: $CSRF_TOKEN" \
