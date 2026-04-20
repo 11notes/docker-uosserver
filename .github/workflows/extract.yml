@@ -159,7 +159,7 @@ jobs:
           push-to-registry: false
 
       # EXPORT DIGEST
-      - name: container image / export digest
+      - name: digest
         if: steps.image-push.outcome == 'success'
         run: |
           mkdir -p ${{ runner.temp }}/digests
@@ -167,11 +167,11 @@ jobs:
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       # UPLOAD DIGEST
-      - name: container image / upload
+      - name: upload
         if: steps.image-push.outcome == 'success'
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: digests-linux-${{ env.DOCKER_IMAGE_PLATFORM_SANITIZED }}
+          name: digests-linux-${{ env.WORKFLOW_RUNNER_ARCH }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
 
