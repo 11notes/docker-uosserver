@@ -85,7 +85,7 @@ jobs:
       - name: extract
         id: extract
         run: |
-          IMAGE="11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.DOWNLOAD_ARCH }}"
+          IMAGE="11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}"
           echo "DOCKER_IMAGE_NAME=${IMAGE}" >> "${GITHUB_OUTPUT}"
           echo "DOCKER_IMAGE_NAME=${IMAGE}" >> "${GITHUB_ENV}"
           podman push --tls-verify=false $(podman images uosserver --noheading | awk '{print $3}') localhost:5000/uosserver
@@ -100,7 +100,6 @@ jobs:
           sbom: true
           provenance: mode=max
           platforms: linux/${{ env.WORKFLOW_RUNNER_ARCH }}
-          cache-to: type=registry,ref=buildcache-${{ env.DOCKER_IMAGE_NAME }},mode=max,compression=zstd,force-compression=true
           tags: |
             11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
             ghcr.io/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
