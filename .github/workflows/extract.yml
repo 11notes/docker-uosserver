@@ -108,7 +108,7 @@ jobs:
         id: grype
         uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         with:
-          image: fw-${{ github.event.inputs.version }}-${ARCH}
+          image: localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${ARCH}
           fail-build: true
           severity-cutoff: 'critical'
           output-format: 'sarif'
@@ -120,7 +120,7 @@ jobs:
         if: failure() || steps.grype.outcome == 'failure'
         uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         with:
-          image: fw-${{ github.event.inputs.version }}-${ARCH}
+          image: localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${ARCH}
           fail-build: false
           severity-cutoff: 'critical'
           output-format: 'table'
