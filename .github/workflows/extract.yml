@@ -58,12 +58,12 @@ jobs:
       # INSTALL
       - name: install
         run: |
-          echo "y" | /tmp/uosserver || echo "installed"
+          echo "y" | sudo /tmp/uosserver || echo "installed"
           mkdir -p ${HOME}/.local/share/containers/storage/overlay
-          cp -a /home/uosserver/.local/share/containers/storage/overlay/. ${HOME}/.local/share/containers/storage/overlay/
+          sudo cp -a /home/uosserver/.local/share/containers/storage/overlay/. ${HOME}/.local/share/containers/storage/overlay/
           mkdir -p ${HOME}/.local/share/containers/storage/overlay-images
-          cp -a /home/uosserver/.local/share/containers/storage/overlay-images/. ${HOME}/.local/share/containers/storage/overlay-images/
+          sudo cp -a /home/uosserver/.local/share/containers/storage/overlay-images/. ${HOME}/.local/share/containers/storage/overlay-images/
           mkdir -p ${HOME}/.local/share/containers/storage/overlay-layers
-          cp -a /home/uosserver/.local/share/containers/storage/overlay-layers/. ${HOME}/.local/share/containers/storage/overlay-layers/
-          chown -R runner:runner ${HOME}/.local/share/containers/storage
+          sudo cp -a /home/uosserver/.local/share/containers/storage/overlay-layers/. ${HOME}/.local/share/containers/storage/overlay-layers/
+          sudo chown -R runner:runner ${HOME}/.local/share/containers/storage
           podman images
