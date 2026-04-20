@@ -1,0 +1,63 @@
+name: "unifi"
+services:
+  os-server:
+    runtime: sysbox-runc
+    cpus: "8.0"
+    mem_reservation: "4G"
+    mem_limit: "8G"
+    image: "11notes/uosserver:5.0.6"
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    cgroup: host
+    environment:
+      TZ: "Europe/Zurich"
+      UOS_SYSTEM_IP: "${IP}"
+    volumes:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:rw"
+      - "os-server.var:/persistent"
+      - "os-server.log:/var/log"
+      - "os-server.data:/data"
+      - "os-server.srv:/srv"
+      - "os-server.lib:/var/lib/unifi"
+      - "os-server.db:/var/lib/mongodb"
+      - "os-server.rabbitmq.ssl:/etc/rabbitmq/ssl"
+    tmpfs:
+      - "/run:exec"
+      - "/run/lock"
+      - "/tmp:exec"
+      - "/var/lib/journal"
+      - "/var/opt/unifi/tmp:size=64m"
+    ports:
+      - 443:443
+      - 5005:5005
+      - 5671:5671
+      - 6789:6789
+      - 8080:8080
+      - 8443:8443
+      - 8444:8444
+      - 8880:8880
+      - 8881:8881
+      - 8882:8882
+      - 9543:9543
+      - 11084:11084
+      - 3478:3478/udp
+      - 5514:5514/udp
+      - 10003:10003/udp
+    networks:
+      frontend:
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 443
+    restart: "always"
+
+volumes:
+  os-server.var:
+  os-server.log:
+  os-server.data:
+  os-server.srv:
+  os-server.lib:
+  os-server.db:
+  os-server.rabbitmq.ssl:
+
+networks:
+  frontend:
