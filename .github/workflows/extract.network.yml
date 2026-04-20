@@ -99,8 +99,6 @@ jobs:
               "username": "admin",
               "password": "${{ env.PASSWORD }}"
             }')
-          echo "cookies: $(cat cookies.txt)"
-          echo "response: ${RESPONSE_HEADERS}"
           CSRF_TOKEN=$(echo ${RESPONSE_HEADERS} | grep -o "x-csrf-token: .*" | awk -F ' ' '{print $2}' | tr -d '\r')
           echo "csrf-token: ${CSRF_TOKEN}"
           curl -ks -X POST https://localhost:3000/api/controllers/network/update \
