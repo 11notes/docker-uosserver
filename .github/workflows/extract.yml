@@ -263,8 +263,4 @@ jobs:
       # INSPECT MANIFEST
       - name: platform merge / inspect
         run: |
-<<<<<<< HEAD
           docker buildx imagetools inspect ${{ matrix.registry }}/11notes/uosserver:${{ steps.meta.outputs.version }}
-=======
-          docker buildx imagetools inspect ${{ matrix.registry }}/11notes/uosserver:${{ steps.meta.outputs.version }}
->>>>>>> 08d7457105d48bc8b4e1bfe56ccb534e7189ebd0
