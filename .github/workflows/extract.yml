@@ -36,6 +36,33 @@ jobs:
           - 5000:5000
     steps:
       # ╔═════════════════════════════════════════════════════╗
+      # ║             CONTAINER REGISTRY LOGIN                ║
+      # ╚═════════════════════════════════════════════════════╝
+      # DOCKER HUB
+      - name: docker / login to hub
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: docker.io
+          username: 11notes
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # GITHUB CONTAINER REGISTRY
+      - name: github / login to ghcr
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ghcr.io
+          username: 11notes
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # REDHAT QUAY
+      - name: quay / login to quay
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: quay.io
+          username: 11notes+github
+          password: ${{ secrets.QUAY_TOKEN }}
+
+      # ╔═════════════════════════════════════════════════════╗
       # ║                 EXTRACT CONTAINER                   ║
       # ╚═════════════════════════════════════════════════════╝
       # CHECKOUT ALL DEPTHS (ALL TAGS)
@@ -111,6 +138,7 @@ jobs:
             11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
             ghcr.io/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
             quay.io/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
+
 
   # ╔═════════════════════════════════════════════════════╗
   # ║                                                     ║
