@@ -1,0 +1,69 @@
+name: extract
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'version of uosserver image to extract'
+        type: string
+        required: true
+
+jobs:
+  # ╔═════════════════════════════════════════════════════╗
+  # ║                                                     ║
+  # ║                                                     ║
+  # ║                    EXTRACT IMAGE                    ║
+  # ║                                                     ║
+  # ║                                                     ║
+  # ╚═════════════════════════════════════════════════════╝
+  extract:
+    name: create container image
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+    steps:
+      # ╔═════════════════════════════════════════════════════╗
+      # ║                 SETUP ENVIRONMENT                   ║
+      # ╚═════════════════════════════════════════════════════╝
+      # REQUIREMENTS
+      - name: requirements
+        run: |
+          mkdir -p ${HOME}/.config/containers
+          chmod 755 ${HOME} ${HOME}/.config ${HOME}/.config/containers
+          touch ${HOME}/.config/containers/storage.conf
+          chmod 755 ${HOME}/.config/containers/storage.conf
+
+      # DOWNLOAD
+      - name: download
+        run: |
+          ARCH=$(arch)
+          case "${ARCH}" in
+            "x86_64") ARCH=x64;;
+            "aarch64") ARCH=arm64;;
+          esac
+          wget -q --show-progress --progress=bar:force -O /tmp/uosserver $(curl -s "https://fw-update.ubnt.com/api/firmware?filter=eq~~product~~unifi-os-server&filter=eq~~platform~~linux-${ARCH}&filter=eq~~channel~~release&sort=-version" | jq -r "._embedded.firmware[] | select(.version | test(\"v${{ github.event.inputs.version }}\")) | ._links.data.href")
+          chmod +x /tmp/uosserver
+
+      # INSTALL
+      - name: install
+        run: |
+          echo "y" | /tmp/uosserver || echo "installed"
+          mkdir -p ${HOME}/.local/share/containers/storage/overlay
+          cp -a /home/uosserver/.local/share/containers/storage/overlay/. ${HOME}/.local/share/containers/storage/overlay/
+          mkdir -p ${HOME}/.local/share/containers/storage/overlay-images
+          cp -a /home/uosserver/.local/share/containers/storage/overlay-images/. ${HOME}/.local/share/containers/storage/overlay-images/
+          mkdir -p ${HOME}/.local/share/containers/storage/overlay-layers
+          cp -a /home/uosserver/.local/share/containers/storage/overlay-layers/. ${HOME}/.local/share/containers/storage/overlay-layers/
+          chown -R runner:runner ${HOME}/.local/share/containers/storage
+          podman images
