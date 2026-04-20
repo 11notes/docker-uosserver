@@ -26,6 +26,9 @@ jobs:
       fail-fast: false
       matrix:
         runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    outputs:
+      DOCKER_IMAGE_NAME: ${{ steps.extract.outputs.DOCKER_IMAGE_NAME }}
+      DOCKER_IMAGE_MERGE_TAG: ${{ github.event.inputs.version }}
 
     services:
       registry:
@@ -33,34 +36,6 @@ jobs:
         ports:
           - 5000:5000
     steps:
-      # ╔═════════════════════════════════════════════════════╗
-      # ║             CONTAINER REGISTRY LOGIN                ║
-      # ╚═════════════════════════════════════════════════════╝
-      # DOCKER HUB
-      - name: docker / login to hub
-        uses: redhat-actions/podman-login@de1fa16e0ecaaa44c0d537db88f68d183b32a8e0
-        with:
-          registry: docker.io
-          username: 11notes
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      # GITHUB CONTAINER REGISTRY
-      - name: github / login to ghcr
-        uses: redhat-actions/podman-login@de1fa16e0ecaaa44c0d537db88f68d183b32a8e0
-        with:
-          registry: ghcr.io
-          username: 11notes
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # REDHAT QUAY
-      - name: quay / login to quay
-        uses: redhat-actions/podman-login@de1fa16e0ecaaa44c0d537db88f68d183b32a8e0
-        with:
-          registry: quay.io
-          username: 11notes+github
-          password: ${{ secrets.QUAY_TOKEN }}
-
-
       # ╔═════════════════════════════════════════════════════╗
       # ║                 EXTRACT CONTAINER                   ║
       # ╚═════════════════════════════════════════════════════╝
@@ -102,31 +77,98 @@ jobs:
 
       # EXTRACT
       - name: extract
+        id: extract
         run: |
-          IMAGE="localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}"
-          echo "WORKFLOW_IMAGE=${IMAGE}" >> "${GITHUB_ENV}"
-          podman push --tls-verify=false $(podman images uosserver --noheading | awk '{print $3}') ${IMAGE}
+          IMAGE="11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}"
+          echo "DOCKER_IMAGE_NAME=${IMAGE}" >> "${GITHUB_OUTPUT}"
+          podman push --tls-verify=false $(podman images uosserver --noheading | awk '{print $3}') localhost:5000/${IMAGE}
 
-      # SCAN
-      - name: scan with grype
-        id: grype
-        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
-        with:
-          image: ${{ env.WORKFLOW_IMAGE }}
-          fail-build: true
-          severity-cutoff: 'critical'
-          output-format: 'sarif'
-          by-cve: true
-          cache-db: true
+  # ╔═════════════════════════════════════════════════════╗
+  # ║                                                     ║
+  # ║                                                     ║
+  # ║         MERGE IMAGES INTO SINGLE MANIFEST           ║
+  # ║                                                     ║
+  # ║                                                     ║
+  # ╚═════════════════════════════════════════════════════╝
+  merge_platform_images:
+    needs: extract
+    name: merge platform images to a single manifest
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        registry: [docker.io, ghcr.io, quay.io]
 
-      # SCAN FAIL
-      - name: scan with grype FAILED
-        if: failure() || steps.grype.outcome == 'failure'
-        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+    env:
+      DOCKER_IMAGE_NAME: ${{ needs.extract.outputs.DOCKER_IMAGE_NAME }}
+      DOCKER_IMAGE_MERGE_TAGS: ${{ needs.docker.outputs.DOCKER_IMAGE_MERGE_TAGS }}
+
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
+    steps:
+      # ╔═════════════════════════════════════════════════════╗
+      # ║             CONTAINER REGISTRY LOGIN                ║
+      # ╚═════════════════════════════════════════════════════╝
+      # DOCKER HUB
+      - name: docker / login to hub
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
-          image: ${{ env.WORKFLOW_IMAGE }}
-          fail-build: false
-          severity-cutoff: 'critical'
-          output-format: 'table'
-          by-cve: true
-          cache-db: true
+          registry: docker.io
+          username: 11notes
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # GITHUB CONTAINER REGISTRY
+      - name: github / login to ghcr
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ghcr.io
+          username: 11notes
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # REDHAT QUAY
+      - name: quay / login to quay
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: quay.io
+          username: 11notes+github
+          password: ${{ secrets.QUAY_TOKEN }}
+
+
+      # ╔═════════════════════════════════════════════════════╗
+      # ║           MERGE PLATFORM IMAGES MANIFEST            ║
+      # ╚═════════════════════════════════════════════════════╝
+      # DOWNLOAD DIGESTS
+      - name: platform merge / digest
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      # SETUP BUILDX BUILDER
+      - name: platform merge / buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      # GET META DATA
+      - name: platform merge / meta
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+        with:
+          images: ${{ matrix.registry }}/${{ env.DOCKER_IMAGE_NAME }}
+          tags: |
+            ${{ env.DOCKER_IMAGE_MERGE_TAGS }}
+
+      # CREATE MANIFEST
+      - name: platform merge / create manifest and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") $(printf 'docker.io/${{ env.DOCKER_IMAGE_NAME }}@sha256:%s ' *)
+
+      # INSPECT MANIFEST
+      - name: platform merge / inspect
+        run: |
+          docker buildx imagetools inspect ${{ matrix.registry }}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
