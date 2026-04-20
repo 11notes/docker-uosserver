@@ -62,7 +62,7 @@ jobs:
           echo "checking Unifi OS Server ready ..."
           RUN=1
           while [ ${RUN} -ge 1 ]; do
-            STATUS=$(curl -skI -o /dev/null -w "%{http_code}" https://localhost:3000/api/system/previous-subnet)
+            STATUS=$(curl -skI -o /dev/null -w "%{http_code}" https://localhost/api/system/previous-subnet)
             echo "Unifi OS Server status: ${STATUS}"
             if [ ${STATUS} == 200 ]; then
               RUN=0
@@ -75,7 +75,7 @@ jobs:
       - name: setup
         run: |
           echo "setup controller"
-          curl -k -X POST https://localhost:3000/api/setup \
+          curl -k -X POST https://localhost/api/setup \
           -H "Content-Type: application/json" \
           -d '{
             "hostname": "github",
@@ -92,7 +92,7 @@ jobs:
         run: |
           echo "NETWORK_VERSION=$(docker exec unifi-os-server-1 cat /usr/lib/unifi/data/db/version)" >> "${GITHUB_ENV}"
           echo "authenticate and get token"
-          RESPONSE_HEADERS=$(curl -ks -D - -o /dev/null https://localhost:3000/api/auth/login \
+          RESPONSE_HEADERS=$(curl -ks -D - -o /dev/null https://localhost/api/auth/login \
             -c cookies.txt \
             -H "Content-Type: application/json" \
             -d '{
@@ -101,7 +101,7 @@ jobs:
             }')
           CSRF_TOKEN=$(echo ${RESPONSE_HEADERS} | grep -o "x-csrf-token: .*" | awk -F ' ' '{print $2}' | tr -d '\r')
           echo "csrf-token: ${CSRF_TOKEN}"
-          curl -ks -X POST https://localhost:3000/api/controllers/network/update \
+          curl -ks -X POST https://localhost/api/controllers/network/update \
             -b cookies.txt \
             -H "Content-Type: application/json" \
             -H "x-csrf-token: ${CSRF_TOKEN}" \
