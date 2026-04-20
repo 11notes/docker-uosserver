@@ -1,0 +1,2 @@
+FROM localhost:5000/uosserver
+STOPSIGNAL SIGRTMIN+3

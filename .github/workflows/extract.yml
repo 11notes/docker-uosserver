@@ -27,7 +27,6 @@ jobs:
       matrix:
         runner: [ubuntu-24.04, ubuntu-24.04-arm]
     outputs:
-      DOCKER_IMAGE_NAME: ${{ steps.extract.outputs.DOCKER_IMAGE_NAME }}
       DOCKER_IMAGE_MERGE_TAG: ${{ github.event.inputs.version }}
 
     services:
@@ -39,7 +38,14 @@ jobs:
       # ╔═════════════════════════════════════════════════════╗
       # ║                 EXTRACT CONTAINER                   ║
       # ╚═════════════════════════════════════════════════════╝
-      # REQUIREMENTS
+      # CHECKOUT ALL DEPTHS (ALL TAGS)
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: master
+          fetch-depth: 0
+
+      # CREATE REQUIREMENTS FOR PODMAN
       - name: requirements
         run: |
           mkdir -p ${HOME}/.config/containers
@@ -60,13 +66,13 @@ jobs:
               echo "WORKFLOW_RUNNER_ARCH=arm64" >> "${GITHUB_ENV}"
           esac
 
-      # DOWNLOAD
+      # DOWNLOAD UOSSERVER INSTALLER
       - name: download
         run: |
           wget -q --show-progress --progress=bar:force -O /tmp/uosserver $(curl -s "https://fw-update.ubnt.com/api/firmware?filter=eq~~product~~unifi-os-server&filter=eq~~platform~~linux-${{ env.DOWNLOAD_ARCH }}&filter=eq~~channel~~release&sort=-version" | jq -r "._embedded.firmware[] | select(.version | test(\"v${{ github.event.inputs.version }}\")) | ._links.data.href")
           chmod +x /tmp/uosserver
 
-      # INSTALL
+      # EXECUTE INSTALLER AND IGNORE FAILURE TO START
       - name: install
         run: |
           echo "y" | sudo /tmp/uosserver || echo "timeout reached, extracting container image"
@@ -75,13 +81,30 @@ jobs:
           sudo cp -a /home/uosserver/.local/share/containers/storage/overlay-layers/. ${HOME}/.local/share/containers/storage/overlay-layers/
           sudo chown -R runner:runner ${HOME}/.local/share/containers/storage
 
-      # EXTRACT
+      # EXTRACT IMAGE FROM LOCAL FILE SYSTEM
       - name: extract
         id: extract
         run: |
-          IMAGE="11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}"
+          IMAGE="11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.DOWNLOAD_ARCH }}"
           echo "DOCKER_IMAGE_NAME=${IMAGE}" >> "${GITHUB_OUTPUT}"
-          podman push --tls-verify=false $(podman images uosserver --noheading | awk '{print $3}') localhost:5000/${IMAGE}
+          echo "DOCKER_IMAGE_NAME=${IMAGE}" >> "${GITHUB_ENV}"
+          podman push --tls-verify=false $(podman images uosserver --noheading | awk '{print $3}') localhost:5000/uosserver
+
+      # BUILD IMAGE BASED ON EXTRACTED IMAGE AND PUSH TO REGISTRIES
+      - name: push
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        with:
+          context: .
+          file: firmware.dockerfile
+          push: true
+          sbom: true
+          provenance: mode=max
+          platforms: linux/${{ env.WORKFLOW_RUNNER_ARCH }}
+          cache-to: type=registry,ref=${{ env.DOCKER_CACHE_NAME }},mode=max,compression=zstd,force-compression=true
+          tags: |
+            11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
+            ghcr.io/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
+            quay.io/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
 
   # ╔═════════════════════════════════════════════════════╗
   # ║                                                     ║
@@ -100,8 +123,7 @@ jobs:
         registry: [docker.io, ghcr.io, quay.io]
 
     env:
-      DOCKER_IMAGE_NAME: ${{ needs.extract.outputs.DOCKER_IMAGE_NAME }}
-      DOCKER_IMAGE_MERGE_TAGS: ${{ needs.docker.outputs.DOCKER_IMAGE_MERGE_TAGS }}
+      IMAGE_MERGE_TAG: ${{ needs.extract.outputs.IMAGE_MERGE_TAG }}
 
     permissions:
       contents: read
@@ -158,17 +180,17 @@ jobs:
         id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
-          images: ${{ matrix.registry }}/${{ env.DOCKER_IMAGE_NAME }}
+          images: ${{ matrix.registry }}/11notes/uosserver
           tags: |
-            ${{ env.DOCKER_IMAGE_MERGE_TAGS }}
+            fw-${{ env.IMAGE_MERGE_TAG }}
 
       # CREATE MANIFEST
       - name: platform merge / create manifest and push
         working-directory: ${{ runner.temp }}/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") $(printf 'docker.io/${{ env.DOCKER_IMAGE_NAME }}@sha256:%s ' *)
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") $(printf 'docker.io/11notes/uosserver@sha256:%s ' *)
 
       # INSPECT MANIFEST
       - name: platform merge / inspect
         run: |
-          docker buildx imagetools inspect ${{ matrix.registry }}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${{ matrix.registry }}/11notes/uosserver:fw-${{ steps.meta.outputs.version }}
