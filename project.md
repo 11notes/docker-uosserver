@@ -17,7 +17,6 @@ If you value security, simplicity and optimizations to the extreme, then this im
 ${{ title_volumes }}
 * **/sys/fs/cgroup** - Directory on your host to access cgroups
 * **/persistent** - Directory of package manager
-* **/var/log** - Directory of all service logs
 * **/data** - Directory of all application data
 * **/srv** - Directory of service specific data
 * **/var/lib/unifi** - Directory of Unifi Network Controller data

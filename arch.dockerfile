@@ -61,7 +61,7 @@
     COPY --from=build / /
 
 # :: PERSISTENT DATA
-  VOLUME ["${APP_ROOT}/var"]
+  VOLUME ["/persistent", "/data", "/srv", "/var/lib/unifi", "/var/lib/mongodb", "/etc/rabbitmq/ssl"]
 
 # :: MONITORING
   HEALTHCHECK --interval=5s --timeout=2s --start-period=60s \
