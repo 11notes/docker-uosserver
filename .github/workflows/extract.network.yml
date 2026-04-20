@@ -127,3 +127,13 @@ jobs:
               sleep 5s
             fi
           done
+
+      # EXTRACT VERSION
+      - name: extract
+        run: |
+          docker exec unifi-os-server-1 mkdir -p /ext/unifi
+          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/bin /ext/unifi/bin
+          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/dl /ext/unifi/dl
+          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/lib /ext/unifi/lib
+          docker exec unifi-os-server-1 cp -rL /usr/lib/unifi/webapps /ext/unifi/webapps
+          ls -lah ${HOME}/extract/network
