@@ -74,15 +74,15 @@ jobs:
           mkdir -p ${HOME}/.local/share/containers/storage/overlay
           mkdir -p ${HOME}/.local/share/containers/storage/overlay-images
           mkdir -p ${HOME}/.local/share/containers/storage/overlay-layers
+          ARCH=$(arch)
+          case "${ARCH}" in
+            "x86_64") export ARCH=x64;;
+            "aarch64") export ARCH=arm64;;
+          esac
 
       # DOWNLOAD
       - name: download
         run: |
-          ARCH=$(arch)
-          case "${ARCH}" in
-            "x86_64") ARCH=x64;;
-            "aarch64") ARCH=arm64;;
-          esac
           wget -q --show-progress --progress=bar:force -O /tmp/uosserver $(curl -s "https://fw-update.ubnt.com/api/firmware?filter=eq~~product~~unifi-os-server&filter=eq~~platform~~linux-${ARCH}&filter=eq~~channel~~release&sort=-version" | jq -r "._embedded.firmware[] | select(.version | test(\"v${{ github.event.inputs.version }}\")) | ._links.data.href")
           chmod +x /tmp/uosserver
 
@@ -98,12 +98,31 @@ jobs:
       # EXTRACT
       - name: extract
         run: |
-          ARCH=$(arch)
-          case "${ARCH}" in
-            "x86_64") ARCH=amd64;;
-            "aarch64") ARCH=arm64;;
-          esac
           PODMAN_IMAGE_TAG=$(podman images uosserver --noheading | awk '{print $2}')
           PODMAN_IMAGE_ID=$(podman images uosserver --noheading | awk '{print $3}')
 
           podman push --tls-verify=false $PODMAN_IMAGE_ID localhost:5000/11notes/uosserver:fw-${{ github.event.inputs.version }}-${ARCH}
+
+      # SCAN
+      - name: scan with grype
+        id: grype
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          image: fw-${{ github.event.inputs.version }}-${ARCH}
+          fail-build: true
+          severity-cutoff: 'critical'
+          output-format: 'sarif'
+          by-cve: true
+          cache-db: true
+
+      # SCAN FAIL
+      - name: scan with grype FAILED
+        if: failure() || steps.grype.outcome == 'failure'
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          image: fw-${{ github.event.inputs.version }}-${ARCH}
+          fail-build: false
+          severity-cutoff: 'critical'
+          output-format: 'table'
+          by-cve: true
+          cache-db: true
