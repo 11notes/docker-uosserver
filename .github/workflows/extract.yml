@@ -100,7 +100,7 @@ jobs:
           sbom: true
           provenance: mode=max
           platforms: linux/${{ env.WORKFLOW_RUNNER_ARCH }}
-          cache-to: type=registry,ref=${{ env.DOCKER_CACHE_NAME }},mode=max,compression=zstd,force-compression=true
+          cache-to: type=registry,ref=buildcache-${{ env.DOCKER_IMAGE_NAME }},mode=max,compression=zstd,force-compression=true
           tags: |
             11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
             ghcr.io/11notes/uosserver:fw-${{ github.event.inputs.version }}-${{ env.WORKFLOW_RUNNER_ARCH }}
