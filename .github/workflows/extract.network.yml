@@ -1,0 +1,94 @@
+name: extract-network
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  PASSWORD: "DsFR.DAmE.3eE7.7TMp"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  # ╔═════════════════════════════════════════════════════╗
+  # ║                                                     ║
+  # ║                                                     ║
+  # ║                    EXTRACT IMAGE                    ║
+  # ║                                                     ║
+  # ║                                                     ║
+  # ╚═════════════════════════════════════════════════════╝
+  extract:
+    name: create container image
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    outputs:
+      IMAGE_MERGE_TAG: ${{ github.event.inputs.version }}
+
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+
+    permissions:
+      actions: write
+      contents: write
+      packages: write
+      attestations: write
+      id-token: write
+      security-events: write
+
+    steps:
+      # ╔═════════════════════════════════════════════════════╗
+      # ║             EXTRACT APP FROM CONTAINER              ║
+      # ╚═════════════════════════════════════════════════════╝
+      # CHECKOUT ALL DEPTHS (ALL TAGS)
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: master
+          fetch-depth: 0
+
+      # RUN CONTAINER
+      - name: run
+        run: |
+          mkdir -p ${HOME}/extract/network
+          cd ./build/extract/network
+          docker compose up -d
+
+      # WAIT TILL CONTAINER STATUS IS HEALTHY
+      - name: wait
+        run: |
+          sleep 60s
+
+      # SETUP UNIFI OS SERVER AND UPDATE NETWORK
+      - name: update
+        run: |
+          echo "setup controller"
+          curl -k -X POST https://localhost:3000/api/setup \
+          -H "Content-Type: application/json" \
+          -d '{
+            "hostname": "github",
+            "timezone": "Europe/Zurich",
+            "username": "admin",
+            "password": "${{ env.PASSWORD }}",
+            "email": "",
+            "enableRemoteAdmin": false,
+            "analytics": false
+          }'
+          echo "authenticate and get token"
+          RESPONSE_HEADERS=$(curl -k -s -D - -o /dev/null https://localhost:3000/api/auth/login \
+            -c cookies.txt \
+            -H "Content-Type: application/json" \
+            -d '{
+              "username": "admin",
+              "password": "${{ env.PASSWORD }}"
+            }')
+          CSRF_TOKEN=$(echo ${RESPONSE_HEADERS} | grep -o "x-csrf-token: .*" | awk -F ' ' '{print $2}' | tr -d '\r')
+          echo "update controller"
+          curl -k -X POST https://localhost:3000/api/controllers/network/update \
+            -b cookies.txt \
+            -H "Content-Type: application/json" \
+            -H "x-csrf-token: $CSRF_TOKEN" \
+            -d '{}'
