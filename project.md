@@ -2,7 +2,7 @@ ${{ title_caution }}
 ${{ github:> [!CAUTION] }}
 ${{ github:> }}To run this image safely, since it needs access to certain resources of your host, run it via ```sysbox``` runtime and not the default Docker runtime if you are **not using rootless runtimes**!
 
-${{ content_synopsis }} This image will provide you a rock solid Unifi OS server image
+${{ content_synopsis }} This image will provide you a rock solid Unifi OS server image. This image breaks (currently) all container philosophies by running multiple containers inside this image that are managed by the Unifi OS Server. This means updates to the apps inside the image are handled by the Unifi OS Server, not the image. Only the Unifi OS Server image itself is handled by this image. Consider running a VM instead of a container for this.
 
 ${{ content_uvp }} Good question! Because ...
 
@@ -14,7 +14,14 @@ ${{ github:> }}* ... this image is created via a secure and pinned CI/CD process
 If you value security, simplicity and optimizations to the extreme, then this image might be for you.
 
 ${{ title_volumes }}
-* **${{ json_root }}/var** - Directory of all configuration data and sites
+* **/sys/fs/cgroup** - Directory on your host to access cgroups
+* **/persistent** - Directory of package manager
+* **/var/log** - Directory of all service logs
+* **/data** - Directory of all application data
+* **/srv** - Directory of service specific data
+* **/var/lib/unifi** - Directory of Unifi Network Controller data
+* **/var/lib/mongodb** - Directory of mongodb
+* **/etc/rabbitmq/ssl** - Directory of self-signed SSL certificates for RabbitMQ
 
 ${{ content_compose }}
 
