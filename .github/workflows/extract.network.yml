@@ -41,14 +41,27 @@ jobs:
           cd ./build/extract/network
           docker compose up -d
 
-      # WAIT TILL CONTAINER STATUS IS HEALTHY
+      # WAIT TILL CONTAINER STATUS IS HEALTHY AND SETUP IS STARTED OR TIMEOUT
       - name: wait
         run: |
+          echo "checking container startup ..."
           RUN=1
           while [ ${RUN} -ge 1 ]; do
             HEALTH=$(docker inspect --format='{{json .State.Health}}' unifi-os-server-1 | jq -r '.Status')
             echo "health: ${HEALTH}"
             if [ ${HEALTH} == "healthy" ]; then
+              RUN=0
+            else
+              sleep 5s
+            fi
+          done
+
+           echo "checking app setup startup ..."
+          RUN=1
+          while [ ${RUN} -ge 1 ]; do
+            STATUS=$(curl -skI -o /dev/null -w "%{http_code}" https://localhost:3000/api/system/previous-subnet)
+            echo "status code: ${STATUS}"
+            if [ ${STATUS} == 200 ]; then
               RUN=0
             else
               sleep 5s
