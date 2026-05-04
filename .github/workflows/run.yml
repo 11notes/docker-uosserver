@@ -33,7 +33,7 @@ jobs:
 
       - name: get latest version and last tag
         run: |
-          export LATEST_VERSION=$(curl -s https://download.svc.ui.com/v1/software-downloads | jq -r '.downloads[] | select(.name | test("UniFi OS Server .+ for Linux (x64)"; "ig")) | [.version][0]' | head -n 1)
+          export LATEST_VERSION=$(curl -s https://download.svc.ui.com/v1/software-downloads | jq -r '.downloads[] | select(.name | test("UniFi OS Server.*"; "ig")) | [.version][0]' | head -n 1)
           export LATEST_TAG=$(git describe --abbrev=0 --tags `git rev-list --tags --max-count=1` | sed 's|v||')
           echo "WORKFLOW_UPDATE_BASE64JSON=$(echo '{"version":"'${LATEST_VERSION}'", "tag":"'${LATEST_TAG}'", "unraid":false, "nobody":false}' | base64 -w 0)" >> "${GITHUB_ENV}"
 
