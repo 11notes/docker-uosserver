@@ -45,7 +45,7 @@ services:
     cpus: "8.0"
     mem_reservation: "4G"
     mem_limit: "8G"
-    image: "11notes/uosserver:5.0.6"
+    image: "11notes/uosserver:5.0.8"
     cap_add:
       - NET_RAW
       - NET_ADMIN
@@ -121,27 +121,19 @@ To find out how you can change the default UID/GID of this container image, cons
 # MAIN TAGS 🏷️
 These are the main tags for the image. There is also a tag for each commit and its shorthand sha256 value.
 
-* [5.0.6](https://hub.docker.com/r/11notes/uosserver/tags?name=5.0.6)
-* [5.0.6-unraid](https://hub.docker.com/r/11notes/uosserver/tags?name=5.0.6-unraid)
-* [5.0.6-nobody](https://hub.docker.com/r/11notes/uosserver/tags?name=5.0.6-nobody)
+* [5.0.8](https://hub.docker.com/r/11notes/uosserver/tags?name=5.0.8)
 
 ### There is no latest tag, what am I supposed to do about updates?
-It is my opinion that the ```:latest``` tag is a bad habbit and should not be used at all. Many developers introduce **breaking changes** in new releases. This would messed up everything for people who use ```:latest```. If you don’t want to change the tag to the latest [semver](https://semver.org/), simply use the short versions of [semver](https://semver.org/). Instead of using ```:5.0.6``` you can use ```:5``` or ```:5.0```. Since on each new version these tags are updated to the latest version of the software, using them is identical to using ```:latest``` but at least fixed to a major or minor version. Which in theory should not introduce breaking changes.
+It is my opinion that the ```:latest``` tag is a bad habbit and should not be used at all. Many developers introduce **breaking changes** in new releases. This would messed up everything for people who use ```:latest```. If you don’t want to change the tag to the latest [semver](https://semver.org/), simply use the short versions of [semver](https://semver.org/). Instead of using ```:5.0.8``` you can use ```:5``` or ```:5.0```. Since on each new version these tags are updated to the latest version of the software, using them is identical to using ```:latest``` but at least fixed to a major or minor version. Which in theory should not introduce breaking changes.
 
 If you still insist on having the bleeding edge release of this app, simply use the ```:rolling``` tag, but be warned! You will get the latest version of the app instantly, regardless of breaking changes or security issues or what so ever. You do this at your own risk!
 
 # REGISTRIES ☁️
 ```
-docker pull 11notes/uosserver:5.0.6
-docker pull ghcr.io/11notes/uosserver:5.0.6
-docker pull quay.io/11notes/uosserver:5.0.6
+docker pull 11notes/uosserver:5.0.8
+docker pull ghcr.io/11notes/uosserver:5.0.8
+docker pull quay.io/11notes/uosserver:5.0.8
 ```
-
-# UNRAID VERSION 🟠
-This image supports unraid by default. Simply add **-unraid** to any tag and the image will run as 99:100 instead of 1000:1000.
-
-# NOBODY VERSION 👻
-This image supports nobody by default. Simply add **-nobody** to any tag and the image will run as 65534:65534 instead of 1000:1000.
 
 # SOURCE 💾
 * [11notes/uosserver](https://github.com/11notes/docker-uosserver)
@@ -161,4 +153,4 @@ This image supports nobody by default. Simply add **-nobody** to any tag and the
 # ElevenNotes™️
 This image is provided to you at your own risk. Always make backups before updating an image to a different version. Check the [releases](https://github.com/11notes/docker-uosserver/releases) for breaking changes. If you have any problems with using this image simply raise an [issue](https://github.com/11notes/docker-uosserver/issues), thanks. If you have a question or inputs please create a new [discussion](https://github.com/11notes/docker-uosserver/discussions) instead of an issue. You can find all my other repositories on [github](https://github.com/11notes?tab=repositories).
 
-*created 20.04.2026, 16:05:54 (CET)*
+*created 26.05.2026, 09:04:22 (CET)*

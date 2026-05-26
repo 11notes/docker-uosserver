@@ -5,7 +5,7 @@ services:
     cpus: "8.0"
     mem_reservation: "4G"
     mem_limit: "8G"
-    image: "11notes/uosserver:5.0.6"
+    image: "11notes/uosserver:5.0.8"
     cap_add:
       - NET_RAW
       - NET_ADMIN
