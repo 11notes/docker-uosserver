@@ -4,7 +4,7 @@
   "name": "uosserver",
   "root": "/",
   "semver": {
-    "version": "5.0.6"
+    "version": "5.0.8"
   },
   "readme": {
     "description": "run Unifi OS server as a container",
